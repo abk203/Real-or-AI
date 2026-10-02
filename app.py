@@ -1,11 +1,14 @@
 import os
 
-os.environ.setdefault("KERAS_BACKEND", "jax")  # must come before "import keras" (Render has no TensorFlow)
+os.environ.setdefault("KERAS_BACKEND", "jax")
+os.environ.setdefault("JAX_PLATFORMS", "cpu")   # don't probe for GPU/TPU
+os.environ.setdefault("XLA_FLAGS", "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1")  # fewer threads
 import random
 import gradio as gr
 import keras
 import numpy as np
 from PIL import Image
+import gc
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(PATH, "best_mobilenet_frozen.keras")
@@ -30,12 +33,24 @@ FILES = sorted(LABELS)
 
 model = keras.saving.load_model(MODEL_PATH, compile=False)
 
-batch = np.stack([
+'''batch = np.stack([
     np.asarray(Image.open(f).convert("RGB").resize((IMG_SIZE, IMG_SIZE)), dtype=np.float32) / 255.0 * PIXEL
     for f in FILES
 ])
 
-P_REAL = dict(zip(FILES, model.predict(batch, verbose=0).ravel().tolist()))
+P_REAL = dict(zip(FILES, model.predict(batch, verbose=0).ravel().tolist()))'''
+
+P_REAL = {}
+for f in FILES:
+    x = np.asarray(Image.open(f).convert("RGB").resize((IMG_SIZE, IMG_SIZE)), dtype=np.float32)[None] / 255.0 * PIXEL
+    P_REAL[f] = float(np.asarray(model(x, training=False)).ravel()[0])
+
+del model
+keras.backend.clear_session()
+gc.collect()
+print(f"Cached predictions for {len(P_REAL)} images")
+
+
 
 def scoreboard(s):
     played = s["idx"] + s["answered"]
