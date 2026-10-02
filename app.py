@@ -20,7 +20,7 @@ NAME = {0: "AI-generated", 1: "Real photo"}
 
 LABELS = {}
 
-for folder, label in (("real", 1), ("AI", 0)):
+for folder, label in (("real", 1), ("ai", 0)):
     n = os.path.join(IMAGES, folder)
     for fname in sorted(os.listdir(n)):
         if fname.lower().endswith((".png", ".jpg", ".jpeg")):
